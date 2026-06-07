@@ -18,5 +18,5 @@ repos:
     rev: v1.10.0
     hooks:
       - id: mypy
-        additional_dependencies: [pydantic, fastapi]
-        args: [--strict]
+        additional_dependencies: [pydantic, fastapi, pydantic-settings, tenacity]
+        args: [--strict, --config-file=backend/mypy.ini]

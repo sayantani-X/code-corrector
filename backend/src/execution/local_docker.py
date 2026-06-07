@@ -5,6 +5,8 @@ from pathlib import Path
 import docker
 import docker.errors
 
+from src.core.config import settings
+
 from .base import BaseExecutor
 
 
@@ -14,13 +16,22 @@ class LocalDockerExecutor(BaseExecutor):
     Maps a local workspace directory to /workspace in the container.
     """
 
-    def __init__(self, image: str = "python:3.12-slim", workspace_dir: str = "./workspace"):
+    def __init__(
+        self,
+        image: str = "python:3.12-slim",
+        workspace_dir: str | None = None,
+        host_workspace_dir: str | None = None,
+    ):
         self.client = docker.from_env()
         self.image = image
-        # Resolve to absolute path, assume current working directory is the root
-        self.workspace_dir = os.path.abspath(workspace_dir)
 
-        # Ensure workspace exists
+        # Use settings if not overridden
+        self.workspace_dir = os.path.abspath(workspace_dir or settings.workspace_dir)
+        self.host_workspace_dir = (
+            host_workspace_dir or settings.docker_host_workspace_path or self.workspace_dir
+        )
+
+        # Ensure workspace exists locally
         os.makedirs(self.workspace_dir, exist_ok=True)
 
         # Pull image if not exists
@@ -39,7 +50,7 @@ class LocalDockerExecutor(BaseExecutor):
             container = self.client.containers.run(
                 self.image,
                 command=["python", f"/workspace/{filename}"],
-                volumes={self.workspace_dir: {"bind": "/workspace", "mode": "rw"}},
+                volumes={self.host_workspace_dir: {"bind": "/workspace", "mode": "rw"}},
                 working_dir="/workspace",
                 network_mode="none",
                 detach=True,

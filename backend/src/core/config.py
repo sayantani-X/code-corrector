@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.1-pro-preview"
     gemini_flash_model: str = "gemini-3.5-flash"
 
+    # Workspace paths for container sandboxing
+    workspace_dir: str = "../workspace"
+    docker_host_workspace_path: str | None = None
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 

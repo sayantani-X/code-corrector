@@ -36,6 +36,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: cc-backend
+    user: root
     restart: always
     ports:
       - "8000:8000"
@@ -44,9 +45,13 @@ services:
       - GCP_REGION=us-central1
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/code_corrector
       - REDIS_URL=redis://redis:6379/0
+      - WORKSPACE_DIR=/workspace
+      - DOCKER_HOST_WORKSPACE_PATH=d:\Projects\code-corrector\workspace
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./workspace:/workspace
+      - ./backend/src:/app/src
+      - ./backend/tests:/app/tests
     depends_on:
       postgres:
         condition: service_healthy
