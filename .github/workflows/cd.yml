@@ -1,0 +1,19 @@
+name: CD
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy-cloud-run:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    # TODO: Set up Workload Identity Federation for GCP Auth
+    # TODO: Build Docker image for Backend
+    # TODO: Push to Artifact Registry
+    # TODO: Deploy to Cloud Run
+    
+    - name: CD Placeholder
+      run: echo "Deployment pipeline goes here"
