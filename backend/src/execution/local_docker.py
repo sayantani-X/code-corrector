@@ -3,6 +3,7 @@ import tempfile
 from pathlib import Path
 
 import docker
+import docker.errors
 
 from .base import BaseExecutor
 
