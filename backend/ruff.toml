@@ -25,30 +25,3 @@ ignore = []
 
 [lint.isort]
 known-first-party = ["api", "core", "domain", "execution", "graph", "tools"]
-line-length = 100
-target-version = "py312"
-exclude = [
-    ".git",
-    ".mypy_cache",
-    ".ruff_cache",
-    ".venv",
-    "__pypackages__",
-    "build",
-    "dist",
-    "venv",
-]
-
-[lint]
-select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "C",  # flake8-comprehensions
-    "B",  # flake8-bugbear
-    "UP", # pyupgrade
-]
-ignore = []
-
-[lint.isort]
-known-first-party = ["api", "core", "domain", "execution", "graph", "tools"]

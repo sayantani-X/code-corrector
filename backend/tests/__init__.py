@@ -1,6 +1,3 @@
 """
 Test suite.
 """
-"""
-Test suite.
-"""
