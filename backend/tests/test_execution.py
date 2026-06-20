@@ -35,3 +35,15 @@ def test_local_docker_executor_syntax_error() -> None:
 
     assert exit_code != 0
     assert "SyntaxError" in stderr
+
+
+@pytest.mark.skipif(not is_docker_available(), reason="Docker daemon not available")
+def test_local_docker_executor_timeout() -> None:
+    executor = LocalDockerExecutor()
+
+    # Sleep for 15 seconds, which exceeds the 10-second container timeout limit
+    code = "import time\ntime.sleep(15)"
+    exit_code, stdout, stderr = executor.execute(code)
+
+    assert exit_code == 124
+    assert "TimeoutError" in stderr

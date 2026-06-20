@@ -58,13 +58,26 @@ class LocalDockerExecutor(BaseExecutor):
                 cap_drop=["ALL"],
             )
 
-            result = container.wait()
-            exit_code = result["StatusCode"]
-
-            stdout = container.logs(stdout=True, stderr=False).decode("utf-8")
-            stderr = container.logs(stdout=False, stderr=True).decode("utf-8")
-
-            container.remove()
+            try:
+                # Wait with a 10-second timeout limit to prevent hanging/infinite loops.
+                result = container.wait(timeout=10)
+                exit_code = result["StatusCode"]
+                stdout = container.logs(stdout=True, stderr=False).decode("utf-8")
+                stderr = container.logs(stdout=False, stderr=True).decode("utf-8")
+            except Exception:
+                # If a timeout occurs, stop/kill the container.
+                try:
+                    container.kill()
+                except Exception:
+                    pass
+                exit_code = 124  # Standard CLI exit code for command timeouts
+                stdout = ""
+                stderr = "TimeoutError: Container execution exceeded the 10-second timeout limit."
+            finally:
+                try:
+                    container.remove(force=True)
+                except Exception:
+                    pass
 
             return exit_code, stdout, stderr
         finally:

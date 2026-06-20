@@ -1,7 +1,7 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "Autonomous AI Software Engineer Backend"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -15,4 +15,9 @@ dependencies = [
     "ruff>=0.15.15",
     "tenacity>=9.1.4",
     "uvicorn>=0.48.0",
+    "langgraph>=0.1.0",
+    "bandit>=1.7.5",
 ]
+
+[tool.pyright]
+extraPaths = ["."]
