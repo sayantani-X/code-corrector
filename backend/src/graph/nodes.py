@@ -26,7 +26,7 @@ class Plan(BaseModel):
     )
 
 
-def planner_node(state: AgentState) -> dict[str, Any]:
+async def planner_node(state: AgentState) -> dict[str, Any]:
     """
     Planner Node:
     Translates an ambiguous high-level user request into a concrete, ordered sequence
@@ -42,9 +42,14 @@ def planner_node(state: AgentState) -> dict[str, Any]:
     )
 
     # Call Gemini Flash (optimal for routing/planning tasks) with structured JSON output
-    response = client.models.generate_content(
+    # We use the async caching-aware LLM function
+    from src.core.llm import generate_content_with_retry_async
+
+    response_text = await generate_content_with_retry_async(
+        client=client,
         model=settings.gemini_flash_model,
-        contents=prompt,
+        prompt=prompt,
+        use_cache=True,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=Plan,
@@ -58,7 +63,6 @@ def planner_node(state: AgentState) -> dict[str, Any]:
 
     try:
         # Parse the structured JSON output from the model
-        response_text = response.text or "{}"
         plan_data = json.loads(response_text)
         steps = plan_data.get("steps", ["Write code in main.py"])
         entry_point = plan_data.get("entry_point", "main.py")
@@ -79,7 +83,7 @@ def planner_node(state: AgentState) -> dict[str, Any]:
     }
 
 
-def coder_node(state: AgentState) -> dict[str, Any]:
+async def coder_node(state: AgentState) -> dict[str, Any]:
     """
     Coder Node:
     Generates or patches code in the workspace based on the plan and current state.
@@ -131,17 +135,19 @@ Current Files in Workspace:
 
     # Add error details if a previous execution failed
     if state.get("exit_code") != 0 and state.get("stderr"):
+        error_info = state.get("stderr_summary") or state.get("stderr", "")
         prompt += (
             f"\n\n[WARNING] Previous execution failed with exit code {state['exit_code']}!\n"
-            f"Traceback/Error logs:\n{state['stderr']}\n"
+            f"Traceback/Error logs:\n{error_info}\n"
             "Please debug and patch the code files to resolve this error."
         )
 
     # Add reviewer feedback if code quality checks failed
     if state.get("review_comments"):
+        review_info = state.get("review_summary") or state.get("review_comments", "")
         prompt += (
             f"\n\n[WARNING] Previous run failed code quality review!\n"
-            f"Reviewer Feedback:\n{state['review_comments']}\n"
+            f"Reviewer Feedback:\n{review_info}\n"
             "Please modify the files to resolve these linting and security issues."
         )
 
@@ -157,7 +163,8 @@ Current Files in Workspace:
     )
 
     # Call Gemini 3.1 Pro with tools. The google-genai SDK handles tool call executions locally.
-    client.models.generate_content(
+    # We use client.aio for async but skip caching here because tools perform I/O side effects
+    await client.aio.models.generate_content(
         model=settings.gemini_model,
         contents=prompt,
         config=types.GenerateContentConfig(

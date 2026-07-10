@@ -1,5 +1,6 @@
 import shutil
-from unittest.mock import MagicMock, patch
+from typing import Generator
+from unittest.mock import MagicMock, patch, AsyncMock
 
 import pytest
 
@@ -26,7 +27,7 @@ def _clear_workspace() -> None:
 
 
 @pytest.fixture(autouse=True)
-def clean_workspace_fixture() -> None:
+def clean_workspace_fixture() -> Generator[None, None, None]:
     """
     Autouse fixture that runs before and after each test case.
     It cleans out all files inside the workspace to ensure test isolation.
@@ -131,21 +132,17 @@ def test_reviewer_node_with_issues() -> None:
     assert result["retry_count"] == 1
 
 
-@patch("src.graph.nodes.get_client")
-def test_planner_node_mocked(mock_get_client: MagicMock) -> None:
+@patch("src.core.llm.generate_content_with_retry_async", new_callable=AsyncMock)
+@pytest.mark.asyncio
+async def test_planner_node_mocked(mock_generate: AsyncMock) -> None:
     """
     Verifies that the Planner node generates the step-by-step plan and entry point
     by parsing Gemini's structured JSON response.
     """
     # Mock the return values of the Google GenAI SDK Client
-    mock_response = MagicMock()
-    mock_response.text = (
+    mock_generate.return_value = (
         '{"steps": ["Step 1: Write main.py", "Step 2: Run main.py"], "entry_point": "main.py"}'
     )
-
-    mock_client = MagicMock()
-    mock_client.models.generate_content.return_value = mock_response
-    mock_get_client.return_value = mock_client
 
     state: AgentState = {
         "task": "Write basic script",
@@ -162,7 +159,7 @@ def test_planner_node_mocked(mock_get_client: MagicMock) -> None:
         "max_retries": 5,
     }
 
-    result = planner_node(state)
+    result = await planner_node(state)
     assert result["plan"] == ["Step 1: Write main.py", "Step 2: Run main.py"]
     assert result["entry_point"] == "main.py"
     assert result["current_step_index"] == 0
@@ -205,7 +202,7 @@ def test_route_after_review() -> None:
         "retry_count": 1,
         "max_retries": 5,
     }
-    assert route_after_review(state_err) == "coder"
+    assert route_after_review(state_err) == "summarizer"
 
     # 3. Comments present, retries exhausted -> route to END
     state_exhausted: AgentState = {
@@ -244,7 +241,7 @@ def test_route_after_execution() -> None:
         "retry_count": 1,
         "max_retries": 5,
     }
-    assert route_after_execution(state_fail) == "coder"
+    assert route_after_execution(state_fail) == "summarizer"
 
     # 2. Failed execution, retries exhausted -> route to END
     state_fail_exhausted: AgentState = {

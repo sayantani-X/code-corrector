@@ -11,6 +11,17 @@ class Settings(BaseSettings):
     workspace_dir: str = "../workspace"
     docker_host_workspace_path: str | None = None
 
+    # Database and Cache Settings
+    database_url: str = "postgresql://postgres:postgres@localhost:5432/code_corrector"
+    redis_url: str = "redis://localhost:6379/0"
+    use_semantic_cache: bool = True
+    cache_similarity_threshold: float = 0.92
+
+    # Graph Execution Settings
+    summarizer_token_threshold: int = 5000
+    enable_hitl_executor: bool = True
+    enable_hitl_planner: bool = True
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
