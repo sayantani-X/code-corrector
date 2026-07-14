@@ -6,8 +6,9 @@ import uuid
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from src.graph.graph import get_app
 from src.core.db import close_db
+from src.graph.graph import get_app
+
 
 async def main():
     try:

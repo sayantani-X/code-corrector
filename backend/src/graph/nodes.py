@@ -162,17 +162,25 @@ Current Files in Workspace:
         "After using tools to save your files, output a concise explanation of what you did."
     )
 
-    # Call Gemini 3.1 Pro with tools. The google-genai SDK handles tool call executions locally.
+    # Call Gemini with tools. The google-genai SDK handles tool call executions locally.
     # We use client.aio for async but skip caching here because tools perform I/O side effects
-    await client.aio.models.generate_content(
-        model=settings.gemini_model,
-        contents=prompt,
+    coder_model = settings.gemini_model if state.get("use_heavy_model") else settings.gemini_flash_model
+    
+    # We use client.aio.chats to utilize automatic_function_calling
+    chat = client.aio.chats.create(
+        model=coder_model,
         config=types.GenerateContentConfig(
             system_instruction=system_instruction,
             tools=[read_file, write_file, list_files],
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                disable=False,
+                maximum_remote_calls=5
+            ),
             temperature=0.1,
-        ),
+        )
     )
+    
+    await chat.send_message(prompt)
 
     # Synchronize the state's files and code after the tool calls complete
     updated_files = list_files()

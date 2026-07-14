@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     enable_hitl_executor: bool = True
     enable_hitl_planner: bool = True
 
+    # API Authentication
+    api_key: str = "default-dev-key-change-in-prod"
+
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 

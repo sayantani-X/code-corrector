@@ -1,6 +1,8 @@
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from typing import Any
+
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import END, START, StateGraph
+from langgraph.types import interrupt
 
 from src.core.config import settings
 from src.core.db import get_db_pool
@@ -8,6 +10,27 @@ from src.domain.state import AgentState
 from src.graph.nodes import coder_node, executor_node, planner_node, reviewer_node
 from src.graph.summarizer import summarizer_node
 
+
+def hitl_planner_node(state: AgentState) -> dict[str, Any]:
+    """Node that conditionally interrupts the graph after planning."""
+    if not state.get("auto_approve_planner") and settings.enable_hitl_planner:
+        interrupt("Review planner output?")
+    return {}
+
+
+def hitl_executor_node(state: AgentState) -> dict[str, Any]:
+    """Node that conditionally interrupts the graph before executing code."""
+    if not state.get("auto_approve_executor") and settings.enable_hitl_executor:
+        interrupt("Review execution?")
+    return {}
+
+
+def route_start(state: AgentState) -> str:
+    """Routes to planner or directly to coder based on bypass_planner toggle."""
+    if state.get("bypass_planner"):
+        print("--- [Start] Bypassing Planner (Direct-to-Coder toggle active) ---")
+        return "coder"
+    return "planner"
 
 # Define the conditional routing logic after the Reviewer Node
 def route_after_review(state: AgentState) -> str:
@@ -28,7 +51,7 @@ def route_after_review(state: AgentState) -> str:
         return "summarizer"
 
     print("--- [Reviewer] Quality checks passed. Routing to Executor... ---")
-    return "executor"
+    return "hitl_executor"
 
 
 # Define the conditional routing logic after the Executor Node
@@ -70,20 +93,24 @@ workflow = StateGraph(AgentState)
 
 # Register the nodes in the state machine
 workflow.add_node("planner", planner_node)
+workflow.add_node("hitl_planner", hitl_planner_node)
 workflow.add_node("coder", coder_node)
 workflow.add_node("reviewer", reviewer_node)
+workflow.add_node("hitl_executor", hitl_executor_node)
 workflow.add_node("executor", executor_node)
 workflow.add_node("summarizer", summarizer_node)
 
 # Set up the static transitions
-workflow.add_edge(START, "planner")
-workflow.add_edge("planner", "coder")
+workflow.add_conditional_edges(START, route_start, {"planner": "planner", "coder": "coder"})
+workflow.add_edge("planner", "hitl_planner")
+workflow.add_edge("hitl_planner", "coder")
 workflow.add_edge("coder", "reviewer")
 workflow.add_edge("summarizer", "coder")  # After summarizing errors, route back to coder to patch
+workflow.add_edge("hitl_executor", "executor")
 
 # Set up the conditional routing edges
 workflow.add_conditional_edges(
-    "reviewer", route_after_review, {"summarizer": "summarizer", "executor": "executor", END: END}
+    "reviewer", route_after_review, {"summarizer": "summarizer", "hitl_executor": "hitl_executor", END: END}
 )
 
 workflow.add_conditional_edges(
@@ -106,21 +133,9 @@ async def get_app() -> Any:
     # Ensure the required schema tables exist
     await checkpointer.setup()
 
-    # Configure Human-in-the-Loop Interrupts based on settings
-    interrupt_before = []
-    interrupt_after = []
-
-    if settings.enable_hitl_executor:
-        interrupt_before.append("executor")
-
-    if settings.enable_hitl_planner:
-        interrupt_after.append("planner")
-
-    # Compile the workflow graph
+    # Compile the workflow graph (interrupts handled natively inside nodes now)
     app = workflow.compile(
         checkpointer=checkpointer,
-        interrupt_before=interrupt_before if interrupt_before else None,
-        interrupt_after=interrupt_after if interrupt_after else None,
     )
 
     return app

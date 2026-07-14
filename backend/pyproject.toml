@@ -22,6 +22,7 @@ dependencies = [
     "google-cloud-logging>=3.16.1",
     "psycopg[binary,pool]>=3.2.1",
     "redis>=5.0.0",
+    "sse-starlette>=3.4.5",
 ]
 
 [tool.pyright]

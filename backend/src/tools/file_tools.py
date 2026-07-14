@@ -54,6 +54,7 @@ def write_file(filename: str, content: str) -> str:
     Returns:
         str: A success message.
     """
+    print(f"[TOOL] write_file called for: {filename}")
     target_path = _validate_path(filename)
 
     # Ensure the user isn't trying to overwrite the workspace directory itself.

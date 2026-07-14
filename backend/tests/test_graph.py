@@ -1,6 +1,6 @@
 import shutil
-from typing import Generator
-from unittest.mock import MagicMock, patch, AsyncMock
+from collections.abc import Generator
+from unittest.mock import AsyncMock, patch
 
 import pytest
 

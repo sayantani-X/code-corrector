@@ -52,3 +52,17 @@ class AgentState(TypedDict):
 
     # Summarized version of reviewer comments, generated if linting/security feedback is too large.
     review_summary: NotRequired[str]
+
+    # --- UI Toggles (Phase 3 Improvisations) ---
+
+    # If True, bypass the Planner node and go directly to Coder.
+    bypass_planner: NotRequired[bool]
+
+    # If True, use the heavier Gemini Pro model in the Coder instead of Flash.
+    use_heavy_model: NotRequired[bool]
+
+    # If True, silence human-in-the-loop verification prompts for the planner.
+    auto_approve_planner: NotRequired[bool]
+
+    # If True, silence human-in-the-loop verification prompts before execution.
+    auto_approve_executor: NotRequired[bool]
