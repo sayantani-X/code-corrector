@@ -40,18 +40,20 @@ services:
     restart: always
     ports:
       - "8000:8000"
+    env_file:
+      - ./backend/.env
     environment:
-      - GCP_PROJECT_ID=sayantani-project1-498212
-      - GCP_REGION=us-central1
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/code_corrector
       - REDIS_URL=redis://redis:6379/0
       - WORKSPACE_DIR=/workspace
       - DOCKER_HOST_WORKSPACE_PATH=d:\Projects\code-corrector\workspace
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./workspace:/workspace
       - ./backend/src:/app/src
       - ./backend/tests:/app/tests
+      - C:\Users\sayan\AppData\Roaming\gcloud:/root/.config/gcloud:ro
     depends_on:
       postgres:
         condition: service_healthy

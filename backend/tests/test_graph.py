@@ -30,12 +30,33 @@ def _clear_workspace() -> None:
 def clean_workspace_fixture() -> Generator[None, None, None]:
     """
     Autouse fixture that runs before and after each test case.
-    It cleans out all files inside the workspace to ensure test isolation.
+    It patches the workspace directories to a temporary test folder to avoid polluting
+    the main application workspace.
     """
-    _clear_workspace()
-    get_resolved_workspace_dir().mkdir(parents=True, exist_ok=True)
-    yield
-    _clear_workspace()
+    from pathlib import Path
+    from src.core.config import settings
+
+    test_ws_name = ".test_workspace"
+    
+    if settings.docker_host_workspace_path:
+        host_base = Path(settings.docker_host_workspace_path).parent
+        host_ws = str(host_base / test_ws_name)
+    else:
+        host_ws = test_ws_name
+
+    with patch("src.core.config.settings.workspace_dir", new=test_ws_name), \
+         patch("src.core.config.settings.docker_host_workspace_path", new=host_ws):
+        
+        _clear_workspace()
+        get_resolved_workspace_dir().mkdir(parents=True, exist_ok=True)
+        
+        yield
+        
+        _clear_workspace()
+        try:
+            get_resolved_workspace_dir().rmdir()
+        except Exception:
+            pass
 
 
 def test_file_tools_path_traversal() -> None:
@@ -185,7 +206,7 @@ def test_route_after_review() -> None:
         "retry_count": 0,
         "max_retries": 5,
     }
-    assert route_after_review(state_ok) == "executor"
+    assert route_after_review(state_ok) == "hitl_executor"
 
     # 2. Comments present, retries left -> route back to coder
     state_err: AgentState = {

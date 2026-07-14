@@ -14,14 +14,18 @@ from src.graph.summarizer import summarizer_node
 def hitl_planner_node(state: AgentState) -> dict[str, Any]:
     """Node that conditionally interrupts the graph after planning."""
     if not state.get("auto_approve_planner") and settings.enable_hitl_planner:
-        interrupt("Review planner output?")
+        response = interrupt("Review planner output?")
+        if isinstance(response, dict) and response.get("action") == "reject":
+            raise ValueError("Planner output was rejected by the user.")
     return {}
 
 
 def hitl_executor_node(state: AgentState) -> dict[str, Any]:
     """Node that conditionally interrupts the graph before executing code."""
     if not state.get("auto_approve_executor") and settings.enable_hitl_executor:
-        interrupt("Review execution?")
+        response = interrupt("Review execution?")
+        if isinstance(response, dict) and response.get("action") == "reject":
+            raise ValueError("Execution was rejected by the user.")
     return {}
 
 
@@ -118,12 +122,19 @@ workflow.add_conditional_edges(
 )
 
 
+_app_instance = None
+
 async def get_app() -> Any:
     """
     Asynchronously compiles and returns the executable graph.
     Configures the PostgreSQL checkpointer for state persistence and configures
     the Human-In-The-Loop (HITL) manual breakpoints.
+    The compiled app is cached globally to prevent concurrent database setup conflicts.
     """
+    global _app_instance
+    if _app_instance is not None:
+        return _app_instance
+
     # Get the global asynchronous database connection pool
     pool = await get_db_pool()
 
@@ -138,4 +149,5 @@ async def get_app() -> Any:
         checkpointer=checkpointer,
     )
 
-    return app
+    _app_instance = app
+    return _app_instance
