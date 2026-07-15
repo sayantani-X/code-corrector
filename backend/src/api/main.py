@@ -1,14 +1,39 @@
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 
 from src.api.routes import router as api_router
+from src.core.db import cleanup_history
+
+async def history_cleanup_task():
+    """Background task that periodically cleans up database history."""
+    while True:
+        await cleanup_history()
+        # Wait for 1 hour before checking again
+        await asyncio.sleep(3600)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: spawn background cleanup task
+    task = asyncio.create_task(history_cleanup_task())
+    yield
+    # Shutdown: cancel the background task
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
 from src.core.config import settings
 
 app = FastAPI(
     title="Code Corrector Agent API",
     description="API for the autonomous LangGraph software engineer agent.",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS middleware for Next.js frontend

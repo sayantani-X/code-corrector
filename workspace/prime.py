@@ -16,6 +16,6 @@ def get_first_n_primes(n: int) -> list[int]:
     return primes
 
 if __name__ == "__main__":
-    first_10_primes = get_first_n_primes(10)
-    print("The first 10 prime numbers are:")
-    print(first_10_primes)
+    first_15_primes = get_first_n_primes(15)
+    print("The first 15 prime numbers are:")
+    print(first_15_primes)

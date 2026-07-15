@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     use_semantic_cache: bool = True
     cache_similarity_threshold: float = 0.92
+    history_retention_days: int = 30
+    history_max_size_mb: int = 200
 
     # Graph Execution Settings
     summarizer_token_threshold: int = 5000
